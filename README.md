@@ -6,9 +6,7 @@ Vagrant + Oracle Linux 7 + Oracle Database 18c (18.3.0) シングル環境の簡
 ダウンロード
 ------------
 
-Oracle Database 18c (18.3.0)のソフトウェアを[Oracle Technology Network](http://www.oracle.com/technetwork/database/enterprise-edition/downloads/index.html)からダウンロードし、Vagrantfileと同じディレクトリに配置。
-
-* LINUX.X64_180000_db_home.zip
+Oracle Database 18c (18.3.0)のソフトウェアを入手し、Vagrantfileと同じディレクトリに配置。
 
 環境変数の設定
 --------------
@@ -107,4 +105,4 @@ Author
 License
 -------
 
-[MIT License](http://www.opensource.org/licenses/mit-license.php)
+[MIT License](https://opensource.org/licenses/MIT)
