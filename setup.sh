@@ -1,23 +1,26 @@
 #!/bin/bash
 set -eu -o pipefail
 
-script_dir="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly SCRIPT_DIR
 
 # load environment variables from .env
 set -a
-if [ -e "$script_dir"/.env ]; then
-  # shellcheck disable=SC1090
-  . "$script_dir"/.env
+if [ -e "$SCRIPT_DIR"/.env ]; then
+  # shellcheck disable=SC1091
+  . "$SCRIPT_DIR"/.env
 else
   echo 'Environment file .env not found. Therefore, dotenv.sample will be used.'
-  # shellcheck disable=SC1090
-  . "$script_dir"/dotenv.sample
+  # shellcheck disable=SC1091
+  . "$SCRIPT_DIR"/dotenv.sample
 fi
 set +a
 
-# Install Mo
-curl -sSL https://git.io/get-mo -o /usr/local/bin/mo
-chmod +x /usr/local/bin/mo
+readonly FILE="$SCRIPT_DIR/LINUX.X64_180000_db_home.zip"
+if [[ ! -f "$FILE" ]]; then
+  echo "$FILE not found"
+  exit 1
+fi
 
 # Install Oracle Preinstallation RPM
 yum -y install oracle-database-preinstall-18c
@@ -37,7 +40,8 @@ EOT
 
 # Install rlwrap and set alias
 # shellcheck disable=SC1091
-readonly OS_VERSION=$(. /etc/os-release; echo "$VERSION")
+OS_VERSION=$(. /etc/os-release && echo "$VERSION")
+readonly OS_VERSION
 case ${OS_VERSION%%.*} in
   7)
     yum -y --enablerepo=ol7_developer_EPEL install rlwrap
@@ -50,26 +54,29 @@ esac
 # Set oracle password
 echo oracle:"$ORACLE_PASSWORD" | chpasswd
 
-# Install database
-/usr/local/bin/mo "$script_dir"/db_install.rsp.mustache >"$script_dir"/db_install.rsp
-su - oracle -c "unzip -d $ORACLE_HOME $script_dir/LINUX.X64_180000_db_home.zip"
+TEMP_DIR=$(mktemp -d)
+readonly TEMP_DIR
+chmod 755 "$TEMP_DIR"
+
+# Install Mo (https://github.com/tests-always-included/mo)
+curl -sSL https://git.io/get-mo -o /usr/local/bin/mo
+chmod +x /usr/local/bin/mo
+
+# Install Oracle Database
+/usr/local/bin/mo "$SCRIPT_DIR"/db_install.rsp.mustache >"$TEMP_DIR"/db_install.rsp
+su - oracle -c "unzip -d $ORACLE_HOME $FILE"
 set +e +o pipefail
 su - oracle -c "cd $ORACLE_HOME && ./runInstaller -silent \
-  -ignorePrereq  -waitforcompletion -responseFile $script_dir/db_install.rsp"
+  -ignorePrereq -waitforcompletion -responseFile $TEMP_DIR/db_install.rsp"
 set -e -o pipefail
 "$ORACLE_BASE"/../oraInventory/orainstRoot.sh
 "$ORACLE_HOME"/root.sh
 
-# Create listener using netca
-su - oracle -c "netca -silent -responseFile \
-  $ORACLE_HOME/assistants/netca/netca.rsp"
+# Create a listener using netca
+su - oracle -c "netca -silent -responseFile $ORACLE_HOME/assistants/netca/netca.rsp"
 
-# Create database
-/usr/local/bin/mo "$script_dir"/dbca.rsp.mustache >"$script_dir"/dbca.rsp
-su - oracle -c "dbca -silent -createDatabase -responseFile $script_dir/dbca.rsp"
+# Create a database
+/usr/local/bin/mo "$SCRIPT_DIR"/dbca.rsp.mustache >"$TEMP_DIR"/dbca.rsp
+su - oracle -c "dbca -silent -createDatabase -responseFile $TEMP_DIR/dbca.rsp"
 
-# Shutdown database
-#echo "shutdown immediate" | su - oracle -c 'sqlplus "/ as sysdba"'
-
-# Stop listener
-#su - oracle -c "lsnrctl stop"
+rm -rf "$TEMP_DIR"
