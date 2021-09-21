@@ -16,7 +16,7 @@ else
 fi
 set +a
 
-readonly FILE="$SCRIPT_DIR/LINUX.X64_180000_db_home.zip"
+readonly FILE="$SCRIPT_DIR/V978967-01.zip"
 if [[ ! -f "$FILE" ]]; then
   echo "$FILE not found"
   exit 1
