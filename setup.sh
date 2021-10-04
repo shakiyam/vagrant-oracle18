@@ -31,7 +31,7 @@ chown -R oracle:oinstall "$ORACLE_BASE"/..
 chmod -R 775 "$ORACLE_BASE"/..
 
 # Set environment variables
-cat <<EOT >> /home/oracle/.bash_profile
+cat <<EOT >>/home/oracle/.bash_profile
 export ORACLE_BASE=$ORACLE_BASE
 export ORACLE_HOME=$ORACLE_HOME
 export ORACLE_SID=$ORACLE_SID
